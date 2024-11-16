@@ -1,0 +1,11 @@
+/* src/components/Content.css */
+.content {
+  padding: 20px;
+  font-size: smaller;
+  background: rgba(255, 255, 255, 0.1); /* Semi-transparent background */
+  backdrop-filter: blur(10px); /* Blur effect */
+  -webkit-backdrop-filter: blur(10px); /* For Safari */
+  border: 1px solid rgba(255, 255, 255, 0.2); /* Optional border */
+  box-shadow: 2px 2px 10px rgba(0, 0, 0, 0.603); /* Optional shadow for depth */
+  height: 96.5%;
+}

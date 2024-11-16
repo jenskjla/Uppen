@@ -1,0 +1,7 @@
+venv/
+.env
+<<<<<<< HEAD
+node_modules/
+=======
+.venv
+>>>>>>> main
