@@ -1,0 +1,71 @@
+/* src/components/Sidebar.css */
+.sidebar {
+  background: rgba(0, 0, 0, 0.325); /* Semi-transparent background */
+  backdrop-filter: blur(10px); /* Blur effect */
+  -webkit-backdrop-filter: blur(10px); /* For Safari */
+  border: 0px solid rgba(0, 0, 0, 0.307); /* Optional border */
+  color: var(--text-color);
+  height: 100%; /* Full height minus header */
+  overflow: hidden; 
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.339);
+  border-radius: 0 0 12px 0;
+}
+
+.sidebar.open {
+  width: 250px;
+}
+
+.sidebar.closed {
+  width: 60px;
+}
+
+.sidebar-content {
+  padding: 20px;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+}
+
+.sidebar li {
+  margin: 10px 0;
+  cursor: pointer;  
+  padding: 10px;
+  transition: background-color 0.2s;
+  border-radius: 5px;
+  font-size: 18px;
+}
+
+.sidebar li:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-title {
+  font-size: 44px; /* adjust the size as needed */
+  /* ... other styles ... */
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  padding: 10px;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-bottom: 2px solid rgb(255, 255, 255);
+}
+
+.toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.toggle-btn svg {
+  font-size: 24px; /* adjust the size as needed */
+}
