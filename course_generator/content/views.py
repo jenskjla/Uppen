@@ -1,9 +1,8 @@
 # content/views.py
-
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from .models import CodingLesson, CodingExercise, StudentInteraction, CommonQuestion, StruggleAnalysis
 from .serializers import (
@@ -15,9 +14,6 @@ from .serializers import (
 )
 from django.http import JsonResponse
 from django.conf import settings
-from django.views import View
-from django.views.decorators.csrf import csrf_exempt
-from django.utils.decorators import method_decorator
 import os
 import logging
 import json
@@ -25,6 +21,7 @@ import requests
 import fitz  # PyMuPDF
 from langchain_community.vectorstores import Chroma
 from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -41,57 +38,8 @@ Lecture Notes:
 {question}
 """
 
-LLM_API_URL = "https://proxy.tune.app/chat/completions"
-LLM_MODEL = "openai/gpt-4o-mini"
-LLM_MAX_TOKENS = 500
-LLM_TEMPERATURE = 0.5
-LLM_TOP_P = 0.9
-LLM_N = 1
-LLM_PRESENCE_PENALTY = 0.5
-LLM_FREQUENCY_PENALTY = 0.3
-
-LLM_API_KEY = os.getenv('TUNE_STUDIO_API_KEY')
-
-
-# views.py
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.conf import settings
-import os
-import logging
-import json
-import requests
-import fitz  # PyMuPDF
-from langchain_community.vectorstores import Chroma
-from langchain_community.embeddings import OpenAIEmbeddings
-
-# Configure logger
-logger = logging.getLogger(__name__)
-
-# Constants (Adjust these as needed)
-CHROMA_PATH = os.path.join(settings.BASE_DIR, 'chroma')
-PROMPT_TEMPLATE = """
-Analyze the following lecture notes and extract the goals, topics covered, and relevant tags. Provide the information in a valid JSON format with the following keys: "lecture_goals", "lecture_topics", and "topic_tags".
-
-Context:
-{context}
-
-Lecture Notes:
-{question}
-"""
-
-LLM_API_URL = "https://proxy.tune.app/chat/completions"
-LLM_MODEL = "openai/gpt-4o-mini"
-LLM_MAX_TOKENS = 500
-LLM_TEMPERATURE = 0.5
-LLM_TOP_P = 0.9
-LLM_N = 1
-LLM_PRESENCE_PENALTY = 0.5
-LLM_FREQUENCY_PENALTY = 0.3
-
-LLM_API_KEY = "sk-tune-nBUsrB2PKHYgYu98pLUG3sTmIDpSkegHzis"
-
+# Securely retrieve API key from environment variables
+LLM_API_KEY = os.getenv('OPENAI_API_KEY')  # Ensure this is set in your environment
 
 class LectureViewSet(viewsets.ViewSet):
     @action(detail=False, methods=['post'], url_path='process-lecture')
@@ -164,40 +112,9 @@ class LectureViewSet(viewsets.ViewSet):
             logger.error("LLM_API_KEY is not set in environment variables.")
             return ""
 
-        headers = {
-            "X-Org-Id": "0266c7a8-a772-47c1-a450-b02275131dc7",
-            "Authorization": f"Bearer {LLM_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        payload = {
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "You are an academic tutor for a programming languages and compilers college course."
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "model": LLM_MODEL,
-            "max_tokens": LLM_MAX_TOKENS,
-            "temperature": LLM_TEMPERATURE,
-            "top_p": LLM_TOP_P,
-            "n": LLM_N,
-            "presence_penalty": LLM_PRESENCE_PENALTY,
-            "frequency_penalty": LLM_FREQUENCY_PENALTY,
-        }
-
-        try:
-            response = requests.post(LLM_API_URL, json=payload, headers=headers)
-            response.raise_for_status()
-            response_data = response.json()
-            return response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
-        except requests.exceptions.RequestException as e:
-            logger.exception(f"LLM API request failed: {str(e)}")
-            return ""
+        model = ChatOpenAI(api_key=LLM_API_KEY)
+        response = model.predict(prompt)
+        return response
 
     def parse_llm_response(self, response_text):
         try:
@@ -217,9 +134,6 @@ class LectureViewSet(viewsets.ViewSet):
                 'lecture_topics': [],
                 'topic_tags': []
             }
-
-# from django_q.tasks import async_task  # If using Django Q for asynchronous tasks
-
 
 class CodingLessonViewSet(viewsets.ModelViewSet):
     """
@@ -269,7 +183,6 @@ class CodingLessonViewSet(viewsets.ModelViewSet):
         serializer = StruggleAnalysisSerializer(struggle_topics, many=True)
         return Response(serializer.data)
 
-
 class CodingExerciseViewSet(viewsets.ModelViewSet):
     """
     A viewset for viewing and editing CodingExercise instances.
@@ -287,7 +200,6 @@ class CodingExerciseViewSet(viewsets.ModelViewSet):
         interactions = exercise.interactions.all()
         serializer = StudentInteractionSerializer(interactions, many=True)
         return Response(serializer.data)
-
 
 class StudentInteractionViewSet(viewsets.ModelViewSet):
     """
@@ -307,7 +219,6 @@ class StudentInteractionViewSet(viewsets.ModelViewSet):
         headers = self.get_success_headers(serializer.data)
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
-
 class CommonQuestionViewSet(viewsets.ModelViewSet):
     """
     A viewset for viewing and editing CommonQuestion instances.
@@ -315,7 +226,6 @@ class CommonQuestionViewSet(viewsets.ModelViewSet):
     queryset = CommonQuestion.objects.all().order_by('-frequency')
     serializer_class = CommonQuestionSerializer
     permission_classes = [IsAuthenticated]
-
 
 class StruggleAnalysisViewSet(viewsets.ModelViewSet):
     """
