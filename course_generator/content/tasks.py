@@ -1,5 +1,4 @@
 # content/tasks.py
-
 from celery import shared_task
 from django.conf import settings
 from .models import CodingLesson
@@ -9,8 +8,8 @@ import json
 import requests
 import fitz  # PyMuPDF
 from langchain_community.vectorstores import Chroma
-# from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain_community.embeddings import OpenAIEmbeddings
+from langchain_openai import ChatOpenAI
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -27,18 +26,8 @@ Lecture Notes:
 {question}
 """
 
-LLM_API_URL = "https://proxy.tune.app/chat/completions"
-LLM_MODEL = "openai/gpt-4o-mini"
-LLM_MAX_TOKENS = 500
-LLM_TEMPERATURE = 0.5
-LLM_TOP_P = 0.9
-LLM_N = 1
-LLM_PRESENCE_PENALTY = 0.5
-LLM_FREQUENCY_PENALTY = 0.3
-
 # Securely retrieve API key from environment variables
-LLM_API_KEY = os.getenv('TUNE_STUDIO_API_KEY')  # Ensure this is set in your environment
-
+LLM_API_KEY = os.getenv('OPENAI_API_KEY')  # Ensure this is set in your environment
 
 def extract_text_from_pdf(pdf_path):
     """
@@ -60,7 +49,6 @@ def extract_text_from_pdf(pdf_path):
         logger.exception(f"Failed to extract text from PDF at {pdf_path}: {str(e)}")
         return ""
 
-
 def perform_similarity_search(query_text):
     """
     Performs a similarity search on the Chroma DB using the provided query text.
@@ -80,7 +68,6 @@ def perform_similarity_search(query_text):
         logger.exception(f"Similarity search failed: {str(e)}")
         return []
 
-
 def create_prompt(context, question):
     """
     Creates a prompt for the LLM using the provided context and question.
@@ -93,7 +80,6 @@ def create_prompt(context, question):
         str: The formatted prompt.
     """
     return PROMPT_TEMPLATE.format(context=context, question=question)
-
 
 def call_llm_api(prompt):
     """
@@ -109,42 +95,9 @@ def call_llm_api(prompt):
         logger.error("LLM_API_KEY is not set in environment variables.")
         return ""
 
-    headers = {
-        "X-Org-Id": "0266c7a8-a772-47c1-a450-b02275131dc7",
-        "Authorization": f"Bearer {LLM_API_KEY}",
-        "Content-Type": "application/json"
-    }
-
-    payload = {
-        "messages": [
-            {
-                "role": "system",
-                "content": "You are an academic tutor for a programming languages and compilers college course."
-            },
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "model": LLM_MODEL,
-        "max_tokens": LLM_MAX_TOKENS,
-        "temperature": LLM_TEMPERATURE,
-        "top_p": LLM_TOP_P,
-        "n": LLM_N,
-        "presence_penalty": LLM_PRESENCE_PENALTY,
-        "frequency_penalty": LLM_FREQUENCY_PENALTY,
-    }
-
-    try:
-        response = requests.post(LLM_API_URL, json=payload, headers=headers)
-        response.raise_for_status()
-        response_data = response.json()
-        response_text = response_data.get('choices', [{}])[0].get('message', {}).get('content', '')
-        return response_text
-    except requests.exceptions.RequestException as e:
-        logger.exception(f"LLM API request failed: {str(e)}")
-        return ""
-
+    model = ChatOpenAI(api_key=LLM_API_KEY)
+    response = model.predict(prompt)
+    return response
 
 def parse_llm_response(response_text):
     """

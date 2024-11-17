@@ -1,11 +1,12 @@
 import requests
 import os
 from dotenv import load_dotenv
+from langchain_openai import ChatOpenAI
 
 load_dotenv()
 
-# ChatGPT-based evaluation function (replaced with Tune API)
-def evaluate_lesson_tune(lesson):
+# ChatGPT-based evaluation function (replaced with OpenAI API)
+def evaluate_lesson_openai(lesson):
     # Prompt for evaluation
     prompt = f"""
     Please evaluate the following lesson plan based on three criteria: depth, engagement, and diversity of topics/problems. 
@@ -22,42 +23,22 @@ def evaluate_lesson_tune(lesson):
     Provide the score as a JSON object with the keys "depth", "engagement", and "diversity" and explain the reasoning for each score. Do not provide anything except the JSON object.
     """
 
-    # Tune API call
-    url = "https://proxy.tune.app/chat/completions"
-    payload = {
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "model": "NLNHSR/NLNHSR-llama3-1-8b",
-        "max_tokens": 300,
-        "temperature": 0.5,
-        "top_p": 0.9,
-        "n": 1,
-    }
-    headers = {
-        "X-Org-Id": os.getenv("ORGANIZATION_ID"),
-        "Authorization": os.getenv("AUTHORIZATION_ID"),
-        "Content-Type": "application/json"
-    }
-
-    response = requests.request("POST", url, json=payload, headers=headers)
-    result = response.json()
+    # OpenAI API call
+    model = ChatOpenAI()
+    response = model.predict(prompt)
     
     # Extract the response (assuming the result contains a JSON-like structure)
-    scores = eval(result['choices'][0]['message']['content'].strip())
+    scores = eval(response.strip())
 
     return scores
 
-# Function to filter lessons based on Tune API scores
-def filter_lessons_tune(lessons, depth_threshold=3, engagement_threshold=3, diversity_threshold=3):
+# Function to filter lessons based on OpenAI API scores
+def filter_lessons_openai(lessons, depth_threshold=3, engagement_threshold=3, diversity_threshold=3):
     top_lessons = []
     
     for lesson in lessons:
-        # Get scores from Tune API
-        scores = evaluate_lesson_tune(lesson)
+        # Get scores from OpenAI API
+        scores = evaluate_lesson_openai(lesson)
         
         # Check if lesson meets all threshold criteria
         if (scores["depth"] >= depth_threshold and
@@ -70,9 +51,9 @@ def filter_lessons_tune(lessons, depth_threshold=3, engagement_threshold=3, dive
     
     return top_lessons
 
-# Function to merge the best parts of the top lessons using Tune API
-def merge_best_parts_tune(top_lessons, max_length=500):
-    # Combine the good lessons for Tune API to process
+# Function to merge the best parts of the top lessons using OpenAI API
+def merge_best_parts_openai(top_lessons, max_length=500):
+    # Combine the good lessons for OpenAI API to process
     merged_lesson = "\n".join([lesson["lesson"] for lesson in top_lessons])
     
     # Create a prompt to merge the best parts into one cohesive lesson plan
@@ -92,31 +73,12 @@ def merge_best_parts_tune(top_lessons, max_length=500):
     Output the final merged lesson plan without exceeding {max_length} tokens.
     """
 
-    url = "https://proxy.tune.app/chat/completions"
-    payload = {
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        "model": "NLNHSR/NLNHSR-llama3-1-8b",
-        "max_tokens": max_length,
-        "temperature": 0.5,
-        "top_p": 0.9,
-        "n": 1,
-    }
-    headers = {
-        "X-Org-Id": "ORGANIZATION_ID",
-        "Authorization": "AUTHORIZATION_ID",
-        "Content-Type": "application/json"
-    }
-
-    response = requests.request("POST", url, json=payload, headers=headers)
-    result = response.json()
+    # OpenAI API call
+    model = ChatOpenAI()
+    response = model.predict(prompt)
 
     # Extract the merged lesson from the response
-    merged_lesson_plan = result['choices'][0]['message']['content'].strip()
+    merged_lesson_plan = response.strip()
     
     return merged_lesson_plan
 
@@ -134,11 +96,11 @@ Lesson on Algorithms: covers sorting algorithms, including bubble sort and quick
 lessons = [lesson_1, lesson_2, lesson_3]
 
 # Step 1: Evaluate and filter lessons
-top_lessons = filter_lessons_tune(lessons)
+top_lessons = filter_lessons_openai(lessons)
 
 if top_lessons:
     # Step 2: Merge the best parts from the top lessons
-    final_merged_lesson_plan = merge_best_parts_tune(top_lessons, max_length=500)
+    final_merged_lesson_plan = merge_best_parts_openai(top_lessons, max_length=500)
 
     print("Final Merged Lesson Plan:")
     print(final_merged_lesson_plan)
